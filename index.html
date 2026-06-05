@@ -169,4 +169,13 @@
       fullscreenContainer.classList.remove("active");
       fullscreenVideo.src = ""; // Clear src
       
-      // ఒకవేళ యూజర్ ఇంకా టార్గెట్ ముందే ఉంటే మళ్ళీ AR లో ప్లే అవ
+      // ఒకవేళ యూజర్ ఇంకా టార్గెట్ ముందే ఉంటే మళ్ళీ AR లో ప్లే అవ్వడానికి
+      if(activeVideo) {
+        activeVideo.play();
+        mainPlayBtn.style.display = "block";
+      }
+    });
+  </script>
+
+</body>
+</html>
