@@ -14,13 +14,13 @@
       font-family: sans-serif;
     }
 
-    /* custom play button style */
+    /* 1. స్క్రీన్ మీద కనిపించే కాలింగ్ బటన్ */
     .ar-play-btn {
       position: absolute;
-      bottom: 20px;
+      bottom: 40px;
       left: 50%;
       transform: translateX(-50%);
-      padding: 12px 24px;
+      padding: 14px 28px;
       background: #ff4757;
       color: white;
       border: none;
@@ -30,62 +30,60 @@
       cursor: pointer;
       z-index: 999;
       display: none; /* మొదట దాచి ఉంచుతాం */
-      box-shadow: 0px 4px 10px rgba(0,0,0,0.3);
+      box-shadow: 0px 4px 15px rgba(0,0,0,0.4);
     }
 
-    /* Video Full Screen/Stuck container */
-    #fullscreen-container {
+    /* 2. ఫుల్ స్క్రీన్ (Stuck) వీడియో కంటైనర్ */
+    #fullscreen-holder {
       position: fixed;
       top: 0;
       left: 0;
       width: 100vw;
       height: 100vh;
-      background: rgba(0, 0, 0, 0.9);
-      z-index: 1000;
-      display: flex;
+      background: #000000;
+      z-index: 9999; /* అన్నిటికన్నా పైన ఉంటుంది */
+      display: none; /* బటన్ నొక్కినప్పుడే ఓపెన్ అవుతుంది */
       justify-content: center;
       align-items: center;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.3s ease;
     }
 
-    #fullscreen-container.active {
-      opacity: 1;
-      pointer-events: auto;
+    #fullscreen-holder video {
+      width: 100%;
+      height: 100%;
+      object-fit: contain; /* వీడియో రేషియో కరెక్ట్ గా ఉంటుంది */
     }
 
-    #fullscreen-video {
-      max-width: 90%;
-      max-height: 80%;
-      border-radius: 8px;
-    }
-
-    .close-btn {
+    /* 3. బ్యాక్ బటన్ స్టైల్ */
+    .back-btn {
       position: absolute;
       top: 20px;
       right: 20px;
-      background: white;
+      background: rgba(255, 255, 255, 0.9);
       color: black;
       border: none;
-      padding: 8px 16px;
-      border-radius: 5px;
+      padding: 10px 20px;
+      border-radius: 20px;
       cursor: pointer;
       font-weight: bold;
+      z-index: 10000;
     }
   </style>
 </head>
 
 <body>
 
+  <!-- AR రెస్పాన్సివ్ మోడ్ లో వచ్చే బటన్ -->
   <button id="mainPlayBtn" class="ar-play-btn">Click to Play Fullscreen</button>
 
-  <div id="fullscreen-container">
-    <button class="close-btn" id="closeBtn">Back to AR</button>
-    <video id="fullscreen-video" controls playsinline></video>
+  <!-- ఫుల్ స్క్రీన్ (Stuck Mode) లేఅవుట్ -->
+  <div id="fullscreen-holder">
+    <button id="backToARBtn" class="back-btn">Back to AR</button>
+    <video id="stuckVideo" controls playsinline></video>
   </div>
 
+  <!-- AR సీన్ -->
   <a-scene
+    id="arScene"
     mindar-image="imageTargetSrc: ./targets.mind; maxTrack: 1;"
     color-space="sRGB"
     renderer="colorManagement: true"
@@ -97,6 +95,7 @@
       <video id="appleVideo" src="./videos/Apple.mp4" loop crossorigin="anonymous" playsinline webkit-playsinline></video>
     </a-assets>
 
+    <!-- AR టార్గెట్ (Responsive) -->
     <a-entity mindar-image-target="targetIndex: 0" id="targetApple">
       <a-plane id="applePlane" src="#appleVideo" position="0 0 0" rotation="0 0 0"></a-plane>
     </a-entity>
@@ -105,74 +104,75 @@
   </a-scene>
 
   <script>
+    const arScene = document.querySelector("#arScene");
     const appleVideo = document.querySelector("#appleVideo");
     const applePlane = document.querySelector("#applePlane");
     const targetApple = document.querySelector("#targetApple");
-
-    // Fullscreen UI Elements
+    
     const mainPlayBtn = document.querySelector("#mainPlayBtn");
-    const fullscreenContainer = document.querySelector("#fullscreen-container");
-    const fullscreenVideo = document.querySelector("#fullscreen-video");
-    const closeBtn = document.querySelector("#closeBtn");
+    const fullscreenHolder = document.querySelector("#fullscreen-holder");
+    const stuckVideo = document.querySelector("#stuckVideo");
+    const backToARBtn = document.querySelector("#backToARBtn");
 
-    let activeVideo = null; // ప్రస్తుతం ఏ వీడియో టార్గెట్ లో ఉందో ట్రాక్ చేయడానికి
+    let isFullscreenMode = false;
 
-    // Adjust plane ratio
-    function adjustPlane(video, plane) {
-      video.addEventListener("loadedmetadata", () => {
-        const ratio = video.videoHeight / video.videoWidth;
-        plane.setAttribute("width", 1);
-        plane.setAttribute("height", ratio);
-      });
-    }
-
-    adjustPlane(appleVideo, applePlane);
-
-    // Apple Target Events
-    targetApple.addEventListener("targetFound", () => {
-      activeVideo = appleVideo;
-      activeVideo.play();
-      mainPlayBtn.style.display = "block"; // బటన్ చూపిస్తాం
+    // వీడియో లోడ్ అవ్వగానే ప్లేన్ రేషియో సెట్ చేయడం
+    appleVideo.addEventListener("loadedmetadata", () => {
+      const ratio = appleVideo.videoHeight / appleVideo.videoWidth;
+      applePlane.setAttribute("width", 1);
+      applePlane.setAttribute("height", ratio);
     });
 
+    // 🎯 1. స్కానర్ టార్గెట్ దొరికినప్పుడు (Responsive Mode)
+    targetApple.addEventListener("targetFound", () => {
+      if (!isFullscreenMode) {
+        appleVideo.play().catch(err => console.log("Autoplay blocked:", err));
+        mainPlayBtn.style.display = "block";
+      }
+    });
+
+    // 🎯 2. టార్గెట్ కోల్పోయినప్పుడు
     targetApple.addEventListener("targetLost", () => {
-      if (activeVideo === appleVideo) {
+      if (!isFullscreenMode) {
         appleVideo.pause();
         mainPlayBtn.style.display = "none";
-        activeVideo = null;
       }
     });
 
-    // Play Button క్లిక్ చేసినప్పుడు జరిగే మ్యాజిక్
+    // 🎯 3. బటన్ క్లిక్ చేయగానే - Responsive నుండి Full Screen (Stuck) మోడ్‌కి మార్చడం
     mainPlayBtn.addEventListener("click", () => {
-      if (activeVideo) {
-        // 1. AR లో రన్ అవుతున్న వీడియో ప్రస్తుత టైమ్ సేవ్ చేసుకుని పాజ్ చేస్తాం
-        const currentTime = activeVideo.currentTime;
-        activeVideo.pause();
+      isFullscreenMode = true;
+      
+      // AR వీడియో ఎక్కడైతే ఆగిందో ఆ టైమ్ నోట్ చేసుకుంటాం
+      const currentProgress = appleVideo.currentTime;
+      appleVideo.pause(); // AR వీడియోని ఆపేస్తాం
+      mainPlayBtn.style.display = "none";
 
-        // 2. Fullscreen HTML Video కి AR వీడియో లింక్ ఇస్తాం
-        fullscreenVideo.src = activeVideo.src;
-        fullscreenVideo.currentTime = currentTime;
-        
-        // 3. UI ని స్క్రీన్ పై Stuck (Full screen Overlay) చేస్తాం
-        fullscreenContainer.classList.add("active");
-        fullscreenVideo.play();
-        
-        // AR ప్లే బటన్ దాచేస్తాం
-        mainPlayBtn.style.display = "none";
-      }
+      // ఫుల్ స్క్రీన్ ప్లేయర్ లోకి అదే వీడియో సోర్స్ ని పంపిస్తాం
+      stuckVideo.src = appleVideo.src;
+      stuckVideo.currentTime = currentProgress;
+      
+      // HTML హోల్డర్ ని ఓపెన్ చేసి ప్లే చేస్తాం (ఇది అస్సలు స్ట్రక్ అవ్వదు)
+      fullscreenHolder.style.display = "flex";
+      stuckVideo.play();
     });
 
-    // Close Button క్లిక్ చేస్తే మళ్ళీ AR మోడ్ కి వెళ్తుంది
-    closeBtn.addEventListener("click", () => {
-      fullscreenVideo.pause();
-      fullscreenContainer.classList.remove("active");
-      fullscreenVideo.src = ""; // Clear src
+    // 🎯 4. ఫుల్ స్క్రీన్ నుండి తిరిగి AR కి రావడం
+    backToARBtn.addEventListener("click", () => {
+      isFullscreenMode = false;
       
-      // ఒకవేళ యూజర్ ఇంకా టార్గెట్ ముందే ఉంటే మళ్ళీ AR లో ప్లే అవ్వడానికి
-      if(activeVideo) {
-        activeVideo.play();
+      const currentProgress = stuckVideo.currentTime;
+      stuckVideo.pause();
+      stuckVideo.src = ""; // క్లియర్ వీడియో సోర్స్
+      fullscreenHolder.style.display = "none";
+
+      // ఒకవేళ మొబైల్ కెమెరా ఇంకా ఇమేజ్ టార్గెట్ ముందే ఉంటే
+      if (targetApple.object3D.visible) {
+        appleVideo.currentTime = currentProgress;
+        appleVideo.play();
         mainPlayBtn.style.display = "block";
+      } else {
+        appleVideo.pause();
       }
     });
   </script>
