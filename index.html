@@ -11,52 +11,78 @@
     body {
       margin: 0;
       overflow: hidden;
+      font-family: sans-serif;
     }
 
-    /* 🔥 Full-screen Video Player Styles */
-    #fullscreenUI {
-      display: none; /* Initially hidden */
+    /* custom play button style */
+    .ar-play-btn {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 12px 24px;
+      background: #ff4757;
+      color: white;
+      border: none;
+      border-radius: 25px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      z-index: 999;
+      display: none; /* మొదట దాచి ఉంచుతాం */
+      box-shadow: 0px 4px 10px rgba(0,0,0,0.3);
+    }
+
+    /* Video Full Screen/Stuck container */
+    #fullscreen-container {
       position: fixed;
       top: 0;
       left: 0;
       width: 100vw;
       height: 100vh;
-      background: black;
-      z-index: 9999;
-      flex-direction: column;
+      background: rgba(0, 0, 0, 0.9);
+      z-index: 1000;
+      display: flex;
       justify-content: center;
       align-items: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
     }
 
-    #fullscreenVideo {
-      width: 100%;
-      height: 100%;
-      /* object-fit: contain సెట్ చేయడం వల్ల అడ్డం (landscape), నిలువు (portrait) ఎలా ఉన్నా వీడియో కరెక్ట్ గా పడుతుంది */
-      object-fit: contain; 
+    #fullscreen-container.active {
+      opacity: 1;
+      pointer-events: auto;
     }
 
-    #closeBtn {
+    #fullscreen-video {
+      max-width: 90%;
+      max-height: 80%;
+      border-radius: 8px;
+    }
+
+    .close-btn {
       position: absolute;
       top: 20px;
       right: 20px;
-      padding: 10px 20px;
-      background: red;
-      color: white;
+      background: white;
+      color: black;
       border: none;
+      padding: 8px 16px;
       border-radius: 5px;
-      font-size: 16px;
-      font-weight: bold;
       cursor: pointer;
-      z-index: 10000;
+      font-weight: bold;
     }
   </style>
 </head>
 
 <body>
 
-  <div id="fullscreenUI">
-    <button id="closeBtn">X Close</button>
-    <video id="fullscreenVideo" controls playsinline></video>
+  <button id="mainPlayBtn" class="ar-play-btn">Click to Play Fullscreen</button>
+
+  <div id="fullscreen-container">
+    <button class="close-btn" id="closeBtn">Back to AR</button>
+    <video id="fullscreen-video" controls playsinline></video>
   </div>
 
   <a-scene
@@ -68,47 +94,19 @@
   >
 
     <a-assets>
-      <video id="appleVideo"
-        src="./videos/Apple.mp4"
-        loop
-        crossorigin="anonymous"
-        playsinline
-        webkit-playsinline>
-      </video>
-
-      <video id="girlVideo"
-        src="./videos/Girl.mp4"
-        loop
-        crossorigin="anonymous"
-        playsinline
-        webkit-playsinline>
-      </video>
+      <video id="appleVideo" src="./videos/Apple.mp4" loop crossorigin="anonymous" playsinline webkit-playsinline></video>
+      <video id="girlVideo" src="./videos/Girl.mp4" loop crossorigin="anonymous" playsinline webkit-playsinline></video>
     </a-assets>
 
     <a-entity mindar-image-target="targetIndex: 0" id="targetApple">
-      <a-plane
-        id="applePlane"
-        class="clickable" 
-        src="#appleVideo"
-        position="0 0 0"
-        rotation="0 0 0">
-      </a-plane>
+      <a-plane id="applePlane" src="#appleVideo" position="0 0 0" rotation="0 0 0"></a-plane>
     </a-entity>
 
     <a-entity mindar-image-target="targetIndex: 1" id="targetGirl">
-      <a-plane
-        id="girlPlane"
-        class="clickable"
-        src="#girlVideo"
-        position="0 0 0"
-        rotation="0 0 0">
-      </a-plane>
+      <a-plane id="girlPlane" src="#girlVideo" position="0 0 0" rotation="0 0 0"></a-plane>
     </a-entity>
 
-    <a-camera position="0 0 0" look-controls="enabled: false">
-      <a-entity cursor="rayOrigin: mouse;" raycaster="objects: .clickable"></a-entity>
-    </a-camera>
-
+    <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
   </a-scene>
 
   <script>
@@ -121,14 +119,15 @@
     const targetApple = document.querySelector("#targetApple");
     const targetGirl = document.querySelector("#targetGirl");
 
-    // Fullscreen Elements
-    const fsUI = document.querySelector("#fullscreenUI");
-    const fsVideo = document.querySelector("#fullscreenVideo");
+    // Fullscreen UI Elements
+    const mainPlayBtn = document.querySelector("#mainPlayBtn");
+    const fullscreenContainer = document.querySelector("#fullscreen-container");
+    const fullscreenVideo = document.querySelector("#fullscreen-video");
     const closeBtn = document.querySelector("#closeBtn");
-    
-    let currentARVideo = null; // ఏ వీడియో ప్లే అవుతుందో ట్రాక్ చేయడానికి
 
-    // Automatically adjust plane ratio based on video
+    let activeVideo = null; // ప్రస్తుతం ఏ వీడియో టార్గెట్ లో ఉందో ట్రాక్ చేయడానికి
+
+    // Adjust plane ratio
     function adjustPlane(video, plane) {
       video.addEventListener("loadedmetadata", () => {
         const ratio = video.videoHeight / video.videoWidth;
@@ -140,74 +139,68 @@
     adjustPlane(appleVideo, applePlane);
     adjustPlane(girlVideo, girlPlane);
 
-    // Target Events
+    // Apple Target Events
     targetApple.addEventListener("targetFound", () => {
-      if(fsUI.style.display !== 'flex') appleVideo.play();
+      activeVideo = appleVideo;
+      activeVideo.play();
+      mainPlayBtn.style.display = "block"; // బటన్ చూపిస్తాం
     });
 
     targetApple.addEventListener("targetLost", () => {
-      appleVideo.pause();
+      if (activeVideo === appleVideo) {
+        appleVideo.pause();
+        mainPlayBtn.style.display = "none";
+        activeVideo = null;
+      }
     });
 
+    // Girl Target Events
     targetGirl.addEventListener("targetFound", () => {
-      if(fsUI.style.display !== 'flex') girlVideo.play();
+      activeVideo = girlVideo;
+      activeVideo.play();
+      mainPlayBtn.style.display = "block"; // బటన్ చూపిస్తాం
     });
 
     targetGirl.addEventListener("targetLost", () => {
-      girlVideo.pause();
-    });
-
-    // 🔥 Fullscreen Logic
-    function openFullscreen(arVideo) {
-      currentARVideo = arVideo;
-      
-      // AR లో ప్లే అవుతున్న వీడియోను ఆపాలి
-      currentARVideo.pause(); 
-
-      // ఫుల్ స్క్రీన్ వీడియోకి సోర్స్ ఇచ్చి, ఎక్కడి వరకు ప్లే అయిందో అక్కడినుంచి ప్లే చేయాలి
-      fsVideo.src = currentARVideo.src;
-      fsVideo.currentTime = currentARVideo.currentTime; 
-      
-      // UI చూపించాలి
-      fsUI.style.display = "flex";
-      fsVideo.play();
-
-      // మొబైల్ లో అడ్డం/నిలువు తిప్పినప్పుడు పర్ఫెక్ట్ గా రావడానికి Native Fullscreen ఆన్ చేయాలి
-      if (fsUI.requestFullscreen) {
-        fsUI.requestFullscreen().catch(err => console.log(err));
-      } else if (fsUI.webkitRequestFullscreen) { /* Safari */
-        fsUI.webkitRequestFullscreen();
-      }
-    }
-
-    // క్లిక్ చేసినప్పుడు ఫంక్షన్ కాల్ అవ్వాలి
-    applePlane.addEventListener('click', () => {
-      openFullscreen(appleVideo);
-    });
-
-    girlPlane.addEventListener('click', () => {
-      openFullscreen(girlVideo);
-    });
-
-    // 🔥 Close Button Logic
-    closeBtn.addEventListener('click', () => {
-      fsVideo.pause();
-      fsUI.style.display = "none";
-      
-      // ఫుల్ స్క్రీన్ నుండి బయటకు రావాలి
-      if (document.fullscreenElement) {
-        document.exitFullscreen().catch(err => console.log(err));
-      } else if (document.webkitExitFullscreen) {
-        document.webkitExitFullscreen();
-      }
-
-      // క్లోజ్ చేసాక మళ్ళీ AR లో అక్కడినుంచే ప్లే అవ్వాలి
-      if(currentARVideo) {
-        currentARVideo.currentTime = fsVideo.currentTime;
-        currentARVideo.play();
+      if (activeVideo === girlVideo) {
+        girlVideo.pause();
+        mainPlayBtn.style.display = "none";
+        activeVideo = null;
       }
     });
 
+    // 🔥 Play Button క్లిక్ చేసినప్పుడు జరిగే మ్యాజిక్
+    mainPlayBtn.addEventListener("click", () => {
+      if (activeVideo) {
+        // 1. AR లో రన్ అవుతున్న వీడియో ప్రస్తుత టైమ్ సేవ్ చేసుకుని పాజ్ చేస్తాం
+        const currentTime = activeVideo.currentTime;
+        activeVideo.pause();
+
+        // 2. Fullscreen HTML Video కి AR వీడియో లింక్ ఇస్తాం
+        fullscreenVideo.src = activeVideo.src;
+        fullscreenVideo.currentTime = currentTime;
+        
+        // 3. UI ని స్క్రీన్ పై Stuck (Full screen Overlay) చేస్తాం
+        fullscreenContainer.classList.add("active");
+        fullscreenVideo.play();
+        
+        // AR ప్లే బటన్ దాచేస్తాం
+        mainPlayBtn.style.display = "none";
+      }
+    });
+
+    // Close Button క్లిక్ చేస్తే మళ్ళీ AR మోడ్ కి వెళ్తుంది
+    closeBtn.addEventListener("click", () => {
+      fullscreenVideo.pause();
+      fullscreenContainer.classList.remove("active");
+      fullscreenVideo.src = ""; // Clear src
+      
+      // ఒకవేళ యూజర్ ఇంకా టార్గెట్ ముందే ఉంటే మళ్ళీ AR లో ప్లే అవ్వడానికి
+      if(activeVideo) {
+        activeVideo.play();
+        mainPlayBtn.style.display = "block";
+      }
+    });
   </script>
 
 </body>
