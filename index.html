@@ -95,15 +95,10 @@
 
     <a-assets>
       <video id="appleVideo" src="./videos/Apple.mp4" loop crossorigin="anonymous" playsinline webkit-playsinline></video>
-      <video id="girlVideo" src="./videos/Girl.mp4" loop crossorigin="anonymous" playsinline webkit-playsinline></video>
     </a-assets>
 
     <a-entity mindar-image-target="targetIndex: 0" id="targetApple">
       <a-plane id="applePlane" src="#appleVideo" position="0 0 0" rotation="0 0 0"></a-plane>
-    </a-entity>
-
-    <a-entity mindar-image-target="targetIndex: 1" id="targetGirl">
-      <a-plane id="girlPlane" src="#girlVideo" position="0 0 0" rotation="0 0 0"></a-plane>
     </a-entity>
 
     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
@@ -111,13 +106,8 @@
 
   <script>
     const appleVideo = document.querySelector("#appleVideo");
-    const girlVideo = document.querySelector("#girlVideo");
-
     const applePlane = document.querySelector("#applePlane");
-    const girlPlane = document.querySelector("#girlPlane");
-
     const targetApple = document.querySelector("#targetApple");
-    const targetGirl = document.querySelector("#targetGirl");
 
     // Fullscreen UI Elements
     const mainPlayBtn = document.querySelector("#mainPlayBtn");
@@ -137,7 +127,6 @@
     }
 
     adjustPlane(appleVideo, applePlane);
-    adjustPlane(girlVideo, girlPlane);
 
     // Apple Target Events
     targetApple.addEventListener("targetFound", () => {
@@ -154,22 +143,7 @@
       }
     });
 
-    // Girl Target Events
-    targetGirl.addEventListener("targetFound", () => {
-      activeVideo = girlVideo;
-      activeVideo.play();
-      mainPlayBtn.style.display = "block"; // బటన్ చూపిస్తాం
-    });
-
-    targetGirl.addEventListener("targetLost", () => {
-      if (activeVideo === girlVideo) {
-        girlVideo.pause();
-        mainPlayBtn.style.display = "none";
-        activeVideo = null;
-      }
-    });
-
-    // 🔥 Play Button క్లిక్ చేసినప్పుడు జరిగే మ్యాజిక్
+    // Play Button క్లిక్ చేసినప్పుడు జరిగే మ్యాజిక్
     mainPlayBtn.addEventListener("click", () => {
       if (activeVideo) {
         // 1. AR లో రన్ అవుతున్న వీడియో ప్రస్తుత టైమ్ సేవ్ చేసుకుని పాజ్ చేస్తాం
@@ -195,13 +169,4 @@
       fullscreenContainer.classList.remove("active");
       fullscreenVideo.src = ""; // Clear src
       
-      // ఒకవేళ యూజర్ ఇంకా టార్గెట్ ముందే ఉంటే మళ్ళీ AR లో ప్లే అవ్వడానికి
-      if(activeVideo) {
-        activeVideo.play();
-        mainPlayBtn.style.display = "block";
-      }
-    });
-  </script>
-
-</body>
-</html>
+      // ఒకవేళ యూజర్ ఇంకా టార్గెట్ ముందే ఉంటే మళ్ళీ AR లో ప్లే అవ
